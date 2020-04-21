@@ -1,3 +1,5 @@
+-- Fortnite Hud by stacky
+
 CreateTexture = draw.CreateTexture
 DecodePNG = common.DecodePNG
 Get = http.Get
