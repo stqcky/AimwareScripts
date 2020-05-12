@@ -1,8 +1,10 @@
 -- Server Side Bullet Impacts by stacky
 
 local REF = gui.Reference( "Visuals", "Local", "Helper" )
-local SHOW = gui.Checkbox( REF, "bulletimpacts", "Bullet impacts", false )
+local SHOW = gui.Checkbox( REF, "bulletimpacts", "Server-Side Bullet Impacts", false )
 SHOW:SetDescription("Show server-side bullet impacts.")
+local SHOW_CLIENT = gui.Checkbox( REF, "bulletimpacts", "Client-Side Bullet Impacts", false )
+SHOW_CLIENT:SetDescription("Show client-side bullet impacts.")
 local COLOR = gui.ColorPicker( SHOW, "bulletimpacts.color", "cock", 0, 0, 255, 50 )
 
 local bulletImpacts = {}
@@ -71,3 +73,15 @@ callbacks.Register( "FireGameEvent", function(event)
     table.insert(bulletImpacts, {Vector3(event:GetFloat("x"), event:GetFloat("y"), event:GetFloat("z")), globals.CurTime() + 4})
 end )
 client.AllowListener( "bullet_impact" )
+
+callbacks.Register( "CreateMove", function()
+    if SHOW_CLIENT:GetValue() then
+        client.SetConVar( "sv_showimpacts", 2, true )
+    else
+        client.SetConVar( "sv_showimpacts", 0, true )
+    end
+end )
+
+callbacks.Register( "Unload", function()
+    client.SetConVar( "sv_showimpacts", 0, true )
+end )
