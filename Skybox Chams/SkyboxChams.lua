@@ -66,6 +66,8 @@ ffi.cdef[[
         char* InterfaceName;
         void* NextInterface;
     } CInterface;
+
+    bool VirtualProtect(void*, size_t, int, int*);
 ]]
 
 mem.CreateInterface = function(module, interfaceName)
@@ -90,6 +92,32 @@ mem.VMTBind = function(typedef, instance, index)
     end
 end
 
+local Hook = {}
+
+function Hook:New(base)
+    assert(base)
+    return setmetatable({base = ffi.cast("void***", base), orig = {}}, {__index = self})
+end
+
+function Hook:HookMethod(index, func)
+    self.orig[index] = self:_ReplaceMethodPtr(index, func)
+end
+
+function Hook:_ReplaceMethodPtr(index, func)
+    assert(self.base)
+    assert(index > 0)
+    assert(func)
+
+    local prevFunc = self.base[0][index]
+
+    local oldProtection = ffi.new("int[1]", 0)
+    ffi.C.VirtualProtect(self.base[0] + index, 4, 0x40, oldProtection)
+    self.base[0][index] = ffi.cast("void*", func)
+    ffi.C.VirtualProtect(self.base[0] + index, 4, oldProtection[0], oldProtection)
+
+    return prevFunc
+end
+
 local FileSystemManager = {
     _findFirst = nil,
     _findNext  = nil,
@@ -99,12 +127,12 @@ local FileSystemManager = {
 }
 
 function FileSystemManager:Initialize()
-    local fileSystem = ffi.cast("void***", mem.CreateInterface("filesystem_stdio.dll", "VFileSystem"))
-    assert(fileSystem)
+    self.fileSystem = ffi.cast("void***", mem.CreateInterface("filesystem_stdio.dll", "VFileSystem"))
+    assert(self.fileSystem)
 
-    self._findFirst = mem.VMTBind("const char* (__thiscall*)(void*, const char*, int*)", fileSystem, 32)
-    self._findNext  = mem.VMTBind("const char* (__thiscall*)(void*, int)"              , fileSystem, 33)
-    self._findClose = mem.VMTBind("void (__thiscall*)(void*, int)"                     , fileSystem, 35)
+    self._findFirst = mem.VMTBind("const char* (__thiscall*)(void*, const char*, int*)", self.fileSystem, 32)
+    self._findNext  = mem.VMTBind("const char* (__thiscall*)(void*, int)"              , self.fileSystem, 33)
+    self._findClose = mem.VMTBind("void (__thiscall*)(void*, int)"                     , self.fileSystem, 35)
 end
 
 function FileSystemManager:FindFirst(path)
@@ -151,6 +179,13 @@ function FileSystemManager:GetFilesInDirectory(path)
     end
 
     return files
+end
+
+function FileSystemManager:AllowLooseFileLoad()
+    local fileSystemHook = Hook:New(self.fileSystem)
+    fileSystemHook:HookMethod(128, ffi.cast("bool(__fastcall*)(void*, void*)", function(ecx, edx)
+        return true
+    end ))
 end
 
 
@@ -448,6 +483,8 @@ end
 
 local function main()
     FileSystemManager:Initialize()
+    FileSystemManager:AllowLooseFileLoad()
+    
     GUIManager:UpdateMaterialList()
 
     callbacks.Register("Draw", function() 
