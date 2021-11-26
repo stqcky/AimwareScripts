@@ -1,1 +1,3 @@
-Region Picker/src/* linguist-vendored=true
+.cpp linguist-language=Lua
+.cc linguist-language=Lua
+.h linguist-language=Lua
