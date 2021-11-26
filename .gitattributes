@@ -1,3 +1,4 @@
-*.cpp linguist-detectable=false
-*.c++ linguist-detectable=false
-*.c linguist-detectable=false
+* linguist-vendored
+*.c linguist-vendored=false
+*.cpp linguist-vendored=false
+*.h linguist-vendored=false
