@@ -1,4 +1,1 @@
-* linguist-vendored
-*.c linguist-vendored=false
-*.cpp linguist-vendored=false
-*.h linguist-vendored=false
+Region Picker/src/* linguist-vendored
